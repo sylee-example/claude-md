@@ -1,17 +1,18 @@
 ---
 description: 검토 끝난 화면 명세 → React 코드 생성 (한 번에 한 파트 api|grid|page)
-argument-hint: <화면 명세.md> <api|grid|page>
-allowed-tools: Bash(python3 docs/harness/scripts/brief.py *)
+argument-hint: <AS-IS .jsp> <api|grid|page>
+allowed-tools: Bash(python3 "${CLAUDE_PROJECT_DIR}/docs/harness/scripts/brief.py" *)
 disable-model-invocation: true
 ---
-!`python3 docs/harness/scripts/brief.py screen $0`
+!`python3 "${CLAUDE_PROJECT_DIR}/docs/harness/scripts/brief.py" convert-screen $ARGUMENTS`
 
 ---
 
 # 지시
 
-"1. 변환 대상" 의 화면 명세가 기준이다. 이번 호출에서는 **`$1` 파트만** 만든다.
-명세서 상태가 "검토 완료" 가 아니면 아무것도 만들지 말고 "명세 검토 필요" 라고만 답한다.
+작업지시서가 "# 작업지시서 생성 실패" 로 시작하면 아래는 무시하고, 그 메시지만 사용자에게 보고하고 끝낸다.
+
+"1. 변환 대상" 의 화면 명세(사람이 검토 완료)가 기준이다. 이번 호출에서는 작업지시서 끝의 **"이번에 만들 파트" 만** 만든다.
 
 | 파트 | 만들 파일 (경로는 표준 예시 규칙이 우선) | 내용 |
 |---|---|---|

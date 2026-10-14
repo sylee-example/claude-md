@@ -4,11 +4,14 @@
 저사양 모델에 파일 전체·매핑 전체를 주면 놓치고 지어낸다.
 필요한 것만 스크립트가 골라서 준다 (모델이 찾게 하지 않는다).
 
-사용:
-  brief.py query  <AS-IS sqlMap.xml> <statementId> [첨부...]
-  brief.py logic  <AS-IS .java>      <메서드명>     [첨부...]
-  brief.py screen <AS-IS .jsp 또는 명세.md>         [첨부...]
-첨부: 함께 볼 파일 (명세서, 화면 js 등). 내용을 그대로 붙인다.
+사용 (스킬이 `brief.py <스킬명> $ARGUMENTS` 로 호출):
+  brief.py convert-query  <AS-IS sqlMap.xml> <statementId> <TO-BE mapper.xml>
+  brief.py spec-logic     <AS-IS .java> <메서드명>
+  brief.py convert-logic  <AS-IS .java> <메서드명>        (검토 완료된 명세 필요)
+  brief.py spec-screen    <AS-IS .jsp> [관련 js...]
+  brief.py convert-screen <AS-IS .jsp> <api|grid|page>   (검토 완료된 명세 필요)
+
+명세 경로는 인자로 받지 않고 규칙으로 정한다 (spec_path). 사람이 경로를 틀릴 여지를 없앤다.
 """
 import re
 import sys
@@ -17,6 +20,17 @@ from pathlib import Path
 from check import camel, read, rows
 
 HARNESS = Path(__file__).resolve().parent.parent
+PROJECT = HARNESS.parent.parent  # <프로젝트>/docs/harness → <프로젝트>
+SKILLS = {
+  # 스킬명: (변환 규칙 태그, 필수 인자 수, 사용법)
+  'convert-query': ('query', 3, '<AS-IS sqlMap.xml> <statementId> <TO-BE mapper.xml>'),
+  'spec-logic': ('logic', 2, '<AS-IS .java> <메서드명>'),
+  'convert-logic': ('logic', 2, '<AS-IS .java> <메서드명>'),
+  'spec-screen': ('screen', 1, '<AS-IS .jsp> [관련 js...]'),
+  'convert-screen': ('screen', 2, '<AS-IS .jsp> <api|grid|page>'),
+}
+SCREEN_PARTS = ('api', 'grid', 'page')
+SPEC_DONE = re.compile(r'상태:\s*검토 완료')
 LANG = {'.xml': 'xml', '.java': 'java', '.jsp': 'jsp', '.js': 'javascript', '.ts': 'ts',
         '.tsx': 'tsx', '.md': 'markdown', '.sql': 'sql'}
 BIG_UNIT_LINES = 300  # 이보다 크면 저사양 모델 품질 급락 → 더 잘게 나누라고 경고
@@ -34,12 +48,20 @@ def fence(content, lang=''):
   return f'{ticks}{lang}\n{content.rstrip()}\n{ticks}'
 
 
+def unit_key(path, target=None):
+  """변환 단위 식별자. 변환 결과의 'AS-IS: <키>' 추적 주석과 inventory.py 가 같이 쓴다."""
+  p = Path(path)
+  key = f'{p.parent.name}/{p.name}'
+  return f'{key}#{target}' if target else key
+
+
 def extract_statement(xml, sid):
+  """statement + 참조 조각. 못 찾으면 None."""
   sid = sid.split('.')[-1]
   m = re.search(rf'<(select|insert|update|delete|statement|procedure|sql)\b[^>]*\bid\s*=\s*"{re.escape(sid)}".*?</\1>',
                 xml, re.S)
   if not m:
-    stop(f'statement id 를 찾지 못함: {sid}')
+    return None
   unit = m.group(0)
   # 참조하는 <sql> 조각, <resultMap> 도 같이 준다
   for ref in dict.fromkeys(re.findall(r'<include\s+refid\s*=\s*"([^"]+)"', unit)):
@@ -134,41 +156,82 @@ def example_section(kind):
   return '\n\n'.join(f'### {p.relative_to(d)}\n' + fence(read(p), LANG.get(p.suffix, '')) for p in files)
 
 
+def spec_path(skill, src, method=None):
+  p = Path(src)
+  if skill.endswith('-logic'):
+    return PROJECT / 'docs' / 'specs' / 'logic' / f'{p.stem}.{method}.md'
+  # JSP 는 list.jsp 처럼 이름이 겹치기 쉬워서 상위 폴더명을 붙인다
+  return PROJECT / 'docs' / 'specs' / 'screen' / f'{p.parent.name}_{p.stem}.md'
+
+
+def trace_section(comment, where):
+  return (f'## 추적 주석 (필수, 글자 그대로)\n\n{where}에 아래 한 줄을 그대로 넣는다. '
+          f'inventory.py 가 이 주석으로 변환 완료를 판정한다.\n\n{fence(comment)}')
+
+
+def reviewed_spec(path, spec_skill):
+  if not path.is_file():
+    stop(f'명세서 없음: {path}\n먼저 /{spec_skill} 를 실행하고 사람이 검토할 것.')
+  text = read(path)
+  if not SPEC_DONE.search(text):
+    stop(f'명세서가 아직 검토 전: {path}\n사람이 검토한 뒤 "상태: 검토 완료" 로 바꿀 것.')
+  return text
+
+
 def main():
-  if len(sys.argv) < 3 or sys.argv[1] not in ('query', 'logic', 'screen'):
-    stop('사용법: brief.py <query|logic|screen> <AS-IS 파일> [대상 id/메서드] [첨부...]')
-  kind, src = sys.argv[1], sys.argv[2]
+  args = sys.argv[1:]
+  if not args or args[0] not in SKILLS:
+    stop('사용법: brief.py <' + '|'.join(SKILLS) + '> <인자...>')
+  skill, rest = args[0], args[1:]
+  kind, need, usage = SKILLS[skill]
+  if len(rest) < need:
+    stop(f'인자 부족. 사용법: /{skill} {usage}')
+  src = rest[0]
   if not Path(src).is_file():
     stop(f'파일 없음: {src}')
   text = read(src)
+  label, unit, lang, extra = src, text, LANG.get(Path(src).suffix, ''), []
 
-  if kind == 'query':
-    if len(sys.argv) < 4:
-      stop('query 는 statementId 가 필요함')
-    target, attachments = sys.argv[3], sys.argv[4:]
-    unit = extract_statement(text, target)
-  elif kind == 'logic':
-    if len(sys.argv) < 4:
-      stop('logic 은 메서드명이 필요함')
-    target, attachments = sys.argv[3], sys.argv[4:]
-    unit = extract_method(text, target)
-  else:
-    target, attachments = '(파일 전체)', sys.argv[3:]
-    unit = text
+  if skill == 'convert-query':
+    label += f' / {rest[1]}'
+    unit = extract_statement(text, rest[1]) or stop(f'statement id 를 찾지 못함: {rest[1]}')
+    extra.append(f'## 저장 대상 (TO-BE mapper)\n\n`{Path(rest[2]).resolve()}`')
+    extra.append(trace_section(f'<!-- AS-IS: {unit_key(src, rest[1])} -->', '변환한 statement 태그 바로 위'))
+  elif skill == 'spec-logic':
+    label += f' / {rest[1]}'
+    unit = extract_method(text, rest[1])
+    extra.append(f'## 명세 저장 경로\n\n`{spec_path(skill, src, rest[1])}`')
+  elif skill == 'convert-logic':
+    label += f' / {rest[1]}'
+    unit = extract_method(text, rest[1])
+    spec = spec_path(skill, src, rest[1])
+    extra.append(f'## 명세서 (사람 검토 완료 — 이것이 기준): `{spec}`\n\n' + fence(reviewed_spec(spec, 'spec-logic'), 'markdown'))
+    extra.append(trace_section(f'// AS-IS: {unit_key(src, rest[1])}', 'Service 메서드 바로 위'))
+  elif skill == 'spec-screen':
+    extra.append(f'## 명세 저장 경로\n\n`{spec_path(skill, src)}`')
+    for a in rest[1:]:
+      if Path(a).is_file():
+        extra.append(f'## 첨부: `{a}`\n\n' + fence(read(a), LANG.get(Path(a).suffix, '')))
+      else:
+        extra.append(f'## 첨부 없음: `{a}` (경로 확인)')
+  else:  # convert-screen: JSP 대신 검토된 명세가 변환 대상
+    part = rest[1]
+    if part not in SCREEN_PARTS:
+      stop(f'파트는 {"|".join(SCREEN_PARTS)} 중 하나: {part}')
+    spec = spec_path(skill, src)
+    label, unit, lang = str(spec), reviewed_spec(spec, 'spec-screen'), 'markdown'
+    extra.append(f'## 이번에 만들 파트: `{part}`')
+    extra.append(trace_section(f'// AS-IS: {unit_key(src, part)}', '이번에 만드는 각 파일의 첫 줄'))
 
   out = ['# 작업지시서 (brief.py 자동 생성)']
   n = unit.count('\n') + 1
   if n > BIG_UNIT_LINES:
     out.append(f'> ⚠ 대상이 {n}줄로 큼. 결과가 나쁘면 더 작은 단위로 나눠서 다시 실행할 것.')
-  out.append(f'## 1. 변환 대상: `{src}` / `{target}`\n\n' + fence(unit, LANG.get(Path(src).suffix, '')))
+  out.append(f'## 1. 변환 대상: `{label}`\n\n' + fence(unit, lang))
   out.append(mapping_section(unit, kind))
   out.append('## 3. 변환 규칙\n\n' + (pattern_section(kind) or '(patterns.md 없음)'))
   out.append('## 4. 표준 예시 (이 형태를 그대로 따를 것)\n\n' + example_section(kind))
-  for a in attachments:
-    if Path(a).is_file():
-      out.append(f'## 첨부: `{a}`\n\n' + fence(read(a), LANG.get(Path(a).suffix, '')))
-    else:
-      out.append(f'## 첨부 없음: `{a}` (경로 확인)')
+  out += extra
   print('\n\n'.join(out))
 
 

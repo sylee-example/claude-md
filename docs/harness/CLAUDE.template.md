@@ -11,7 +11,7 @@
 5. 작업지시서에 없는 파일을 찾아 돌아다니지 않는다.
 
 ## 작업 방식
-- 변환은 슬래시 명령으로만: /convert-query, /spec-logic, /convert-logic, /spec-screen, /convert-screen
+- 변환은 스킬로만 (사용자가 실행): /convert-query, /spec-logic, /convert-logic, /spec-screen, /convert-screen
 - 한 번에 한 단위만. 단위가 끝나면 사용자가 /clear 한다.
 - 파일 저장 후 `[검증 실패]` 메시지가 오면 그 항목만 고친다.
   같은 오류가 2번 반복되면 그 줄에 `TODO(HARNESS): 사유` 를 남기고 멈춘다.

@@ -18,7 +18,20 @@
       "Bash(pnpm *)",
       "Bash(node *)",
       "Bash(tsc *)",
-      "Bash(vite *)"
+      "Bash(vite *)",
+      "Edit(/docs/harness/**)",
+      "Edit(/docs/inventory/**)",
+      "Edit(/.claude/**)",
+      "Edit(/CLAUDE.md)",
+      "Edit(**/build.gradle)",
+      "Edit(**/build.gradle.kts)",
+      "Edit(**/settings.gradle)",
+      "Edit(**/gradle.properties)",
+      "Edit(**/package.json)",
+      "Edit(**/package-lock.json)",
+      "Edit(**/yarn.lock)",
+      "Edit(**/pnpm-lock.yaml)",
+      "Edit(//AS-IS_절대경로로_바꿀_것/**)"
     ]
   },
   "hooks": {

@@ -1,17 +1,18 @@
 ---
 description: 검토 끝난 로직 명세 → Controller/Service/DTO/Mapper 인터페이스 생성
-argument-hint: <AS-IS .java> <메서드명> <명세.md>
-allowed-tools: Bash(python3 docs/harness/scripts/brief.py *)
+argument-hint: <AS-IS .java> <메서드명>
+allowed-tools: Bash(python3 "${CLAUDE_PROJECT_DIR}/docs/harness/scripts/brief.py" *)
 disable-model-invocation: true
 ---
-!`python3 docs/harness/scripts/brief.py logic $0 $1 $2`
+!`python3 "${CLAUDE_PROJECT_DIR}/docs/harness/scripts/brief.py" convert-logic $ARGUMENTS`
 
 ---
 
 # 지시
 
-"첨부" 의 명세서가 기준이다. 명세서와 AS-IS 코드가 다르면 명세서를 따른다.
-명세서 상태가 "검토 완료" 가 아니면 아무것도 만들지 말고 "명세 검토 필요" 라고만 답한다.
+작업지시서가 "# 작업지시서 생성 실패" 로 시작하면 아래는 무시하고, 그 메시지만 사용자에게 보고하고 끝낸다.
+
+작업지시서 끝의 "명세서" 가 기준이다 (사람이 검토 완료). 명세서와 AS-IS 코드가 다르면 명세서를 따른다.
 
 1. 명세 "0. 생성 파일" 의 파일만 만든다. 이미 있는 파일이면 해당 메서드만 추가한다.
 2. 형태(어노테이션, 응답 래퍼, 예외, DTO 모양)는 "4. 표준 예시" 를 그대로 따른다.

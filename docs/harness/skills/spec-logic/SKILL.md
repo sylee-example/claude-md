@@ -1,20 +1,23 @@
 ---
 description: AS-IS 로직(메서드) 1개 분석 → 로직 명세서 작성 (코드 생성 없음)
-argument-hint: <AS-IS .java> <메서드명> <명세 저장 경로.md>
-allowed-tools: Bash(python3 docs/harness/scripts/brief.py *)
+argument-hint: <AS-IS .java> <메서드명>
+allowed-tools: Bash(python3 "${CLAUDE_PROJECT_DIR}/docs/harness/scripts/brief.py" *)
+disallowed-tools: Edit
 disable-model-invocation: true
 ---
-!`python3 docs/harness/scripts/brief.py logic $0 $1`
+!`python3 "${CLAUDE_PROJECT_DIR}/docs/harness/scripts/brief.py" spec-logic $ARGUMENTS`
 
 ---
 
 # 지시
 
-코드를 만들지 않는다. 위 메서드를 분석해서 아래 양식을 그대로 채워 `$2` 에 저장한다.
+작업지시서가 "# 작업지시서 생성 실패" 로 시작하면 아래는 무시하고, 그 메시지만 사용자에게 보고하고 끝낸다.
+
+코드를 만들지 않는다. 위 메서드를 분석해서 아래 양식을 그대로 채워 "명세 저장 경로" 에 Write 한다.
 
 - 모든 이름은 TO-BE 이름 ("2. 매핑" 표 기준). AS-IS 이름은 "AS-IS 이름" 열에만 쓴다.
 - 모르는 것은 추측하지 말고 `TODO(HARNESS): 사유`.
-- 양식의 제목·표 머리글은 바꾸지 않는다.
+- 양식의 제목·표 머리글·"상태" 줄은 바꾸지 않는다.
 
 ````markdown
 # 로직 명세: <TO-BE 서비스 메서드명>
