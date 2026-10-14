@@ -1,0 +1,4 @@
+asis_table,tobe_table,status,merge_cond,note
+TB_CUST_M,CM_CUSTOMER,RENAMED,,예시 행 - 실제 매핑으로 교체
+TB_CUST_CORP,CM_CUSTOMER,MERGED,CUST_TYPE_CD = 'CORP',예시 - 데이터 없어 통합. SELECT는 WHERE에 조건 추가 / INSERT는 값 세팅
+TB_OLD_LOG,,DROPPED,,예시 - 폐기. 사람 판단 필요

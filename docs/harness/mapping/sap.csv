@@ -1,0 +1,4 @@
+rfc_function,rfc_param,rap_path,rap_field,method,note
+Z_SD_GET_ORDER,,/sap/opu/odata4/(실제 RAP 서비스 경로)/SalesOrder,,GET,예시 행 - 함수 단위 행 (rfc_param 비움)
+Z_SD_GET_ORDER,I_VBELN,,SalesOrderID,,예시 - IMPORT → $filter 또는 키
+Z_SD_GET_ORDER,ET_ITEMS,,_Item,,예시 - TABLE 파라미터 → 하위 엔티티 ($expand)

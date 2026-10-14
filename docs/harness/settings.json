@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(gradle *)",
+      "Bash(./gradlew *)",
+      "Bash(gradlew *)",
+      "Bash(sh gradlew *)",
+      "Bash(bash gradlew *)",
+      "Bash(gradlew.bat *)",
+      "Bash(./gradlew.bat *)",
+      "Bash(mvn *)",
+      "Bash(./mvnw *)",
+      "Bash(javac *)",
+      "Bash(java *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(yarn *)",
+      "Bash(pnpm *)",
+      "Bash(node *)",
+      "Bash(tsc *)",
+      "Bash(vite *)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/harness/scripts/check.py\""
+          }
+        ]
+      }
+    ]
+  }
+}
